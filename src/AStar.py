@@ -235,6 +235,7 @@ class Direction():
         
 def getWaypoints(path):
     waypoints = []
+    waypoints.append(start)
     direction = Direction()
     previous = start
     previous.direction = direction.start
@@ -245,10 +246,13 @@ def getWaypoints(path):
             previous = node
         else:
             continue
-    waypoints = waypoints[1::]
-    waypoints.append(start)
+    if len(waypoints) > 1: 
+        a = list()
+        a.append(waypoints[0])
+        a.extend(waypoints[2::])
     waypoints.append(end)
-        
+    
+    AStar_Done = True
     return waypoints    
 
 #Publish Explored Cells function
@@ -437,9 +441,13 @@ def astar_init():
     global map_data
     global start
     global end
+    global waypoints
     
     global start_pos_flag
     global end_pos_flag
+    global AStar_Done
+    AStar_Done = False
+    
     
    
     #global start_pos_z
@@ -457,6 +465,7 @@ def astar_init():
     start_pos_flag = False
     end_pos_flag = False
     
+    waypoints = []
     
     Map_Cell_Width = 0.2
     Map_Cell_Height = 0.2
@@ -486,8 +495,8 @@ def astar_init():
     rospy.sleep(rospy.Duration(1, 0))
     
     print "Starting Lab 4"
-    start = AStarNode(-1,-1.8)
     end = AStarNode(1,1.8);
+    start = AStarNode(-1,-1.8)
     print "AStar set up. "
 
 
@@ -496,6 +505,7 @@ def astar_init():
 if __name__ == '__main__':
     astar_init()
     Movement.movement_init()
+    
     rospy.spin()
     
     
