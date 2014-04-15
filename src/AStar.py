@@ -132,11 +132,11 @@ def map_function(msg):
     map_data = msg.data
     map_width = msg.info.width
     map_height = msg.info.height
-    map_resolution = msg.info.resolution
+    map_resolution = round(msg.info.resolution, 3)
     map_cell_width = map_resolution
     map_cell_height = map_resolution
-    map_x_offset = msg.info.origin.position.x + (0.5 * map_cell_width)
-    map_y_offset = msg.info.origin.position.y + (0.5 * map_cell_height)
+    map_x_offset = round(msg.info.origin.position.x + (0.5 * map_resolution), 1)
+    map_y_offset = round(msg.info.origin.position.y + (0.5 * map_resolution),1)
 
     diagonal_distance = sqrt(map_cell_width**2 + map_cell_height**2)
 
@@ -148,7 +148,12 @@ def getMapIndex(node):
     global map_y_offset
     global map_resolution
     #tiles were being "seen" as one to the right of where they actually are -> the +0.5
-    return int(round(((node.point.y - map_y_offset) * (1.0 / map_resolution) * map_width) + ((node.point.x - map_x_offset + .05) * (1.0 / map_resolution)),3))
+    print "node.point.y: " + str(node.point.y)
+    print "map_y_offset: " + str(map_y_offset)
+    print "map_resolution: " + str(map_resolution)
+    a = (((node.point.y - map_y_offset) / map_resolution) * map_width)
+    a = a + ((node.point.x - map_x_offset) / map_resolution)
+    return int(round(a,2))
 
 #Takes in current node, returns list of possible directional movements
 def WhereToGo(node):
@@ -216,20 +221,14 @@ def move_cost(node, next):
     global diagonal_distance
     #determine if diagonal
     #if change in x
-    diagonal = round(abs(node.point.x - next.point.x),3) == map_cell_width
+    diagonal = round(abs(node.point.x - next.point.x),3) == round(map_cell_width, 3)
     #if change in x and change in y
-    diagonal = diagonal and round(abs(node.point.y - next.point.y),3) == map_cell_height 
+    diagonal = diagonal and round(abs(node.point.y - next.point.y),3) == round(map_cell_height,3)
     if diagonal:
         #print diagonal_distance
-        return diagonal_distance
+        return round(2 * map_resolution, 3)
     else:
-        #if not diagonal, is it horizontal?
-        if (round(abs(node.point.x - next.point.x),3) == map_cell_width):
-            return map_cell_width
-        #if not horizontal, then must be vertical
-        else:
-            return map_cell_height
-
+        return round(map_resolution, 3)
 class AStarNode():
     
     def __init__(self, x, y):
@@ -368,14 +367,14 @@ def set_initial_pose (msg):
     start_pos_y = msg.pose.pose.position.y
     #set initial pose values
     if msg.pose.pose.position.x % map_cell_width < (map_cell_width / 2.0):
-    	start_pos_x = start_pos_x - (msg.pose.pose.position.x % (map_cell_width / 2.0)) + (map_cell_width / 2.0)
+    	start_pos_x = start_pos_x - (msg.pose.pose.position.x % (map_cell_width)) #+ (map_cell_width / 2.0)
     else:
-    	start_pos_x = start_pos_x - (msg.pose.pose.position.x % map_cell_width) + (3.0 * map_cell_width / 2.0)
+    	start_pos_x = start_pos_x - (msg.pose.pose.position.x % map_cell_width) + map_cell_width #+ (3.0 * map_cell_width / 2.0)
     
     if msg.pose.pose.position.y % map_cell_height < (map_cell_height / 2.0):
-    	start_pos_y = start_pos_y - (msg.pose.pose.position.y % (map_cell_width / 2.0)) + (map_cell_width / 2.0)
+    	start_pos_y = start_pos_y - (msg.pose.pose.position.y % (map_cell_width)) #+ (map_cell_width / 2.0)
     else:
-    	start_pos_y = start_pos_y - (msg.pose.pose.position.y % map_cell_width) + (3.0 * map_cell_width / 2.0)
+    	start_pos_y = start_pos_y - (msg.pose.pose.position.y % map_cell_width) + map_cell_width#+ (3.0 * map_cell_width / 2.0)
     #if msg.pose.pose.position.x % .2 < .1:
     #	start_pos_x = (msg.pose.pose.position.x / .2)
     #else:
@@ -388,8 +387,8 @@ def set_initial_pose (msg):
     #start_w = msg.pose.pose.orientation.w
     
     #print initial pose values
-    start.point.x = start_pos_x
-    start.point.y = start_pos_y
+    start.point.x = round(start_pos_x, 3)
+    start.point.y = round(start_pos_y, 3)
     print ""
     print "Initial Pose Values:"
     print "start_pos_x = ", start.point.x
@@ -421,18 +420,18 @@ def set_goal_pose (msg):
     end_pos_y = msg.pose.position.y
     #set initial pose values
     if msg.pose.position.x % map_cell_width < (map_cell_width / 2.0):
-        end_pos_x = end_pos_x - (msg.pose.position.x % (map_cell_width / 2.0)) + (map_cell_width / 2.0)
+        end_pos_x = end_pos_x - (msg.pose.position.x % map_cell_width)
     else:
-        end_pos_x = end_pos_x - (msg.pose.position.x % map_cell_width) + (3.0 * map_cell_width / 2.0)
+        end_pos_x = end_pos_x - (msg.pose.position.x % map_cell_width) + map_cell_width
     
     if msg.pose.position.y % map_cell_height < (map_cell_height / 2.0):
-        end_pos_y = end_pos_y - (msg.pose.position.y % (map_cell_height / 2.0)) + (map_cell_width / 2.0)
+        end_pos_y = end_pos_y - (msg.pose.position.y % map_cell_height)
     else:
-        end_pos_y = end_pos_y - (msg.pose.position.y % map_cell_height) + (3.0 * map_cell_height / 2.0)
+        end_pos_y = end_pos_y - (msg.pose.position.y % map_cell_height) + map_cell_height
         
         
-    end.point.x = end_pos_x
-    end.point.y = end_pos_y
+    end.point.x = round(end_pos_x,3)
+    end.point.y = round(end_pos_y,3)
     
     print "end_pos_x = ", end.point.x
     print "end_pos_y = ", end.point.y 
@@ -506,7 +505,7 @@ def astar_init():
     #    h_const < 1 -> f(n) becomes heuristic dominant = greedy
     #    h_const > 1 -> f(n) becomes movement cost dominant = optimal search (more time!!)
     #        2 -> seems safe enough
-    h_const = 1.02
+    h_const = 1
         
     #Publishers: 
     pub_start    = rospy.Publisher('/start', GridCells) # Publisher for start Point
