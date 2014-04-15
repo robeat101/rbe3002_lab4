@@ -204,7 +204,7 @@ def timerCallback(event):
 
 
 #Main handler of the project
-def run():
+def movement_init():
     global pub
     global pose
     global odom_tf
@@ -247,6 +247,6 @@ def run():
 
 if __name__ == '__main__':
     try:
-        run()
+        movement_init()
     except rospy.ROSInterruptException:
         pass

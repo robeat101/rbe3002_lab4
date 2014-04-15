@@ -7,6 +7,7 @@ from geometry_msgs.msg import Point, PoseWithCovarianceStamped, PoseStamped
 from numpy import ma
 from math import sqrt
 from __builtin__ import pow
+from genpy.rostime import Duration
 
 
 def heuristic(current, end):
@@ -14,10 +15,11 @@ def heuristic(current, end):
     x_2 = pow((current.point.x - end.point.x), 2)
     y_2 = pow((current.point.y - end.point.y), 2)
     h = sqrt(x_2+y_2)
-    return h #/ h_const
+    return h / h_const
 
 #takes in Start and End AStar nodes.
 def AStar_search(start, end):
+    global pub_frontier
     #Set Start and End values
     start.g = 0
     start.h = heuristic(start, end)
@@ -45,6 +47,7 @@ def AStar_search(start, end):
             #Construct path
             path = []
             repeatedNode_flag = False
+            FrontierSet.remove(current)
             while current.parent:
                 path.append(current)
                 current = current.parent
@@ -54,12 +57,16 @@ def AStar_search(start, end):
                         ExpandedSet.remove(expanded)
                         break
                 path.append(current)
-            
-            
+            for frontier in FrontierSet:
+                if end.poseEqual(frontier):
+                    FrontierSet.remove(frontier)
+
+            #rospy.sleep(rospy.Duration(.2,0))
             #update gridcells
             PublishGridCells(pub_explored, ExpandedSet)
+            PublishGridCells(pub_frontier, FrontierSet)
             #Return path (less one garbage node that is appended) 
-            return path[::-1]
+            return path[1:-1]
         
         #Else, move node from frontier to explored
         FrontierSet.remove(current)
@@ -405,7 +412,7 @@ def set_goal_pose (msg):
            start_pos_flag = False
            end_pos_flag = False
     
-def astar_run():
+def astar_init():
         # Change this node name to include your username
     rospy.init_node('rbansal_vcunha_dbourque_Lab3Node')
     
@@ -416,6 +423,8 @@ def astar_run():
     global publisher
     global pub_start
     global pub_end
+    global pub_path
+    global pub_frontier
     global pub_explored
     global pose
     global odom_tf
@@ -425,6 +434,8 @@ def astar_run():
     global diagonal_distance
     global h_const
     global map_data
+    global start
+    global end
     
     global start_pos_flag
     global end_pos_flag
@@ -455,7 +466,7 @@ def astar_run():
     #    h_const < 1 -> f(n) becomes heuristic dominant = greedy
     #    h_const > 1 -> f(n) becomes movement cost dominant = optimal search (more time!!)
     #        2 -> seems safe enough
-    h_const = 2
+    h_const = 2 
         
     #Publishers: 
     pub_start    = rospy.Publisher('/start', GridCells) # Publisher for start Point
@@ -482,8 +493,11 @@ def astar_run():
 #######################################
 # This is the program's main function
 if __name__ == '__main__':
-    astar_run()
-    Movement.run()
+    astar_init()
+    Movement.movement_init()
+    rospy.spin()
+    
+    
     
 
 
