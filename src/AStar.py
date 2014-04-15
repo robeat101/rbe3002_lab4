@@ -19,6 +19,13 @@ def heuristic(current, end):
 
 #takes in Start and End AStar nodes.
 def AStar_search(start, end):
+    global map_width
+    global map_height
+    global map_cell_width
+    global map_cell_height
+    global map_resolution
+    global map_x_offset
+    global map_y_offset
     global pub_frontier
     #Set Start and End values
     start.g = 0
@@ -38,10 +45,8 @@ def AStar_search(start, end):
         PublishGridCells(pub_explored, ExpandedSet)
         PublishGridCells(pub_start, [start])
         PublishGridCells(pub_end, [end])
-        
         #find the node in FrontierSet with the minimum heuristic value
         current = min(FrontierSet, key=lambda o:o.g + o.h)
-        
         #If the goal is being expanded
         if current.poseEqual(end):
             #Construct path
@@ -88,7 +93,6 @@ def AStar_search(start, end):
                     repeatedNode_flag = True
                     somethingWasUpdatedFlag = True
                     break   
-            
             #Try to update cost of traveling to node if already exists
             for frontier in FrontierSet:
                 if node.poseEqual(frontier) and repeatedNode_flag == False:
@@ -111,98 +115,120 @@ def AStar_search(start, end):
                 FrontierSet.add(node)
             repeatedNode_flag = False
             somethingWasUpdatedFlag = False
-
     return None
 
 
 def map_function(msg):
-	global map_data
-	map_data = msg.data
+    global map_data
+    global map_width
+    global map_height
+    global map_cell_width
+    global map_cell_height
+    global map_resolution
+    global map_x_offset
+    global map_y_offset
+    global diagonal_distance
+
+    map_data = msg.data
+    map_width = msg.info.width
+    map_height = msg.info.height
+    map_resolution = msg.info.resolution
+    map_cell_width = map_resolution
+    map_cell_height = map_resolution
+    map_x_offset = msg.info.origin.position.x + (0.5 * map_cell_width)
+    map_y_offset = msg.info.origin.position.y + (0.5 * map_cell_height)
+
+    diagonal_distance = sqrt(map_cell_width**2 + map_cell_height**2)
+
 
 #this needs to be universalized for other maps
 def getMapIndex(node):
-    return int(round(((((node.point.y +3) * 5) *37) + ((node.point.x +3) * 5)),0))
+    global map_width
+    global map_x_offset
+    global map_y_offset
+    global map_resolution
+    #tiles were being "seen" as one to the right of where they actually are -> the +0.5
+    return int(round(((node.point.y - map_y_offset) * (1.0 / map_resolution) * map_width) + ((node.point.x - map_x_offset + .05) * (1.0 / map_resolution)),3))
 
 #Takes in current node, returns list of possible directional movements
 def WhereToGo(node):
-    global Map_Cell_Width
-    global Map_Cell_Height
+    global map_cell_width
+    global map_cell_height
     global diagonal_distance
     possibleNodes = []
-    
-    direction = Direction()
 
+    direction = Direction()
     #Hacky code begins
-    North = AStarNode(round(node.point.x,1), round(node.point.y+Map_Cell_Height,1))
-    North.g = node.g + Map_Cell_Height
+    North = AStarNode(round(node.point.x,3), round(node.point.y+map_cell_height,3))
+    North.g = node.g + map_cell_height
     North.step_direction = direction.n
     
-    NorthEast = AStarNode(round(node.point.x+Map_Cell_Width,1), round(node.point.y+Map_Cell_Height,1))
+    NorthEast = AStarNode(round(node.point.x+map_cell_width,3), round(node.point.y+map_cell_height,3))
     NorthEast.g = node.g + diagonal_distance
     NorthEast.step_direction = direction.ne
     
-    East = AStarNode(round(node.point.x+Map_Cell_Width,1), round(node.point.y, 1))
-    East.g = node.g + Map_Cell_Width
+    East = AStarNode(round(node.point.x+map_cell_width,3), round(node.point.y, 3))
+    East.g = node.g + map_cell_width
     East.step_direction = direction.e
     
-    SouthEast = AStarNode(round(node.point.x+Map_Cell_Width,1), round(node.point.y-Map_Cell_Height,1))
+    SouthEast = AStarNode(round(node.point.x+map_cell_width,3), round(node.point.y-map_cell_height,3))
     SouthEast.g = node.g + diagonal_distance
     SouthEast.step_direction = direction.se
     
-    South = AStarNode(round(node.point.x, 1), round(node.point.y-Map_Cell_Height,1))
-    South.g = node.g + Map_Cell_Height
+    South = AStarNode(round(node.point.x, 3), round(node.point.y-map_cell_height,3))
+    South.g = node.g + map_cell_height
     South.step_direction = direction.s
     
-    SouthWest = AStarNode(round(node.point.x-Map_Cell_Width,1), round(node.point.y-Map_Cell_Height,1))
+    SouthWest = AStarNode(round(node.point.x-map_cell_width,3), round(node.point.y-map_cell_height,3))
     SouthWest.g = node.g + diagonal_distance
     SouthWest.step_direction = direction.sw
     
-    West = AStarNode(round(node.point.x-Map_Cell_Width,1), round(node.point.y, 1))
-    West.g = node.g + Map_Cell_Width
+    West = AStarNode(round(node.point.x-map_cell_width,3), round(node.point.y, 3))
+    West.g = node.g + map_cell_width
     West.step_direction = direction.w
     
-    NorthWest = AStarNode(round(node.point.x-Map_Cell_Width,1), round(node.point.y+Map_Cell_Height,1))
+    NorthWest = AStarNode(round(node.point.x-map_cell_width,3), round(node.point.y+map_cell_height,3))
     NorthWest.g = node.g + diagonal_distance
     NorthWest.step_direction = direction.nw
-    
-    if map_data[getMapIndex(North)] != 100:
+
+    if (map_data[getMapIndex(North)] != 100) and (map_data[getMapIndex(North)] != -1):
         possibleNodes.append(North)
-    if map_data[getMapIndex(NorthEast)] != 100:
+    if (map_data[getMapIndex(NorthEast)] != 100) and (map_data[getMapIndex(NorthEast)] != -1):
         possibleNodes.append(NorthEast)
-    if map_data[getMapIndex(East)] != 100:
+    if (map_data[getMapIndex(East)] != 100) and (map_data[getMapIndex(East)] != -1):
         possibleNodes.append(East)
-    if map_data[getMapIndex(SouthEast)] != 100:
+    if (map_data[getMapIndex(SouthEast)] != 100) and (map_data[getMapIndex(SouthEast)] != -1):
         possibleNodes.append(SouthEast)
-    if map_data[getMapIndex(South)] != 100:
+    if (map_data[getMapIndex(South)] != 100) and (map_data[getMapIndex(South)] != -1):
         possibleNodes.append(South)
-    if map_data[getMapIndex(SouthWest)] != 100:
+    if (map_data[getMapIndex(SouthWest)] != 100) and (map_data[getMapIndex(SouthWest)] != -1):
         possibleNodes.append(SouthWest)
-    if map_data[getMapIndex(West)] != 100:
+    if (map_data[getMapIndex(West)] != 100) and (map_data[getMapIndex(West)] != -1):
         possibleNodes.append(West)
-    if map_data[getMapIndex(NorthWest)] != 100:
+    if (map_data[getMapIndex(NorthWest)] != 100) and (map_data[getMapIndex(NorthWest)] != -1):
         possibleNodes.append(NorthWest)
 
     return possibleNodes
 
 def move_cost(node, next):
-    global Map_Cell_Width
-    global Map_Cell_Height
+    global map_cell_width
+    global map_cell_height
     global diagonal_distance
     #determine if diagonal
     #if change in x
-    diagonal = round(abs(node.point.x - next.point.x),1) == Map_Cell_Width
+    diagonal = round(abs(node.point.x - next.point.x),3) == map_cell_width
     #if change in x and change in y
-    diagonal = diagonal and round(abs(node.point.y - next.point.y),1) == Map_Cell_Height 
+    diagonal = diagonal and round(abs(node.point.y - next.point.y),3) == map_cell_height 
     if diagonal:
         #print diagonal_distance
         return diagonal_distance
     else:
         #if not diagonal, is it horizontal?
-        if (round(abs(node.point.x - next.point.x),1) == Map_Cell_Width):
-            return Map_Cell_Width
+        if (round(abs(node.point.x - next.point.x),3) == map_cell_width):
+            return map_cell_width
         #if not horizontal, then must be vertical
         else:
-            return Map_Cell_Height
+            return map_cell_height
 
 class AStarNode():
     
@@ -216,8 +242,8 @@ class AStarNode():
         self.step_direction = direction.start
         
     def poseEqual(self, node):
-        return_val = round(node.point.x, 1) == round(self.point.x,1)
-        return_val = return_val and round(node.point.y, 1) == round(self.point.y,1) 
+        return_val = round(node.point.x, 3) == round(self.point.x,3)
+        return_val = return_val and round(node.point.y, 3) == round(self.point.y,3) 
     
         return return_val
 
@@ -257,11 +283,13 @@ def getWaypoints(path):
 
 #Publish Explored Cells function
 def PublishGridCells(publisher, nodes):
+    global map_cell_width
+    global map_cell_height
     #Initialize gridcell
     gridcells = GridCells()
     gridcells.header.frame_id = 'map'
-    gridcells.cell_width = Map_Cell_Width
-    gridcells.cell_height = Map_Cell_Height
+    gridcells.cell_width = map_cell_width
+    gridcells.cell_height = map_cell_height
 
     #Iterate through list of nodes
     for node in nodes: 
@@ -279,8 +307,8 @@ def PublishWayPoints(publisher, nodes):
 	#Initialize gridcell
 	gridcells = GridCells()
 	gridcells.header.frame_id = 'map'
-	gridcells.cell_width = Map_Cell_Width
-	gridcells.cell_height = Map_Cell_Height
+	gridcells.cell_width = map_cell_width
+	gridcells.cell_height = map_cell_height
 
 	#Iterate through list of nodes
 	for node in nodes: 
@@ -295,7 +323,9 @@ def PublishWayPoints(publisher, nodes):
 
 
 def run_Astar():
-    
+    global pub_start
+    global pub_end
+    global pub_path
     PublishGridCells(pub_start, [start])
     PublishGridCells(pub_end, [end])
     PublishGridCells(pub_path, [])
@@ -304,7 +334,6 @@ def run_Astar():
     rospy.sleep(rospy.Duration(.1, 0))
     
     path = AStar_search(start, end)
-    
     print "h, change_x, change_y"
     print start.h
     print end.point.x - start.point.x
@@ -323,8 +352,8 @@ def run_Astar():
 #####################################3
 # set and print initialpose
 def set_initial_pose (msg):
-    global Map_Cell_Width
-    global Map_Cell_Height
+    global map_cell_width
+    global map_cell_height
     global start_pos_x
     global start_pos_y
     global start_pos_flag
@@ -337,18 +366,16 @@ def set_initial_pose (msg):
     
     start_pos_x = msg.pose.pose.position.x
     start_pos_y = msg.pose.pose.position.y
-    
     #set initial pose values
-    if msg.pose.pose.position.x % Map_Cell_Width < (Map_Cell_Width / 2.0):
-    	start_pos_x = start_pos_x - (msg.pose.pose.position.x % Map_Cell_Width)
+    if msg.pose.pose.position.x % map_cell_width < (map_cell_width / 2.0):
+    	start_pos_x = start_pos_x - (msg.pose.pose.position.x % (map_cell_width / 2.0)) + (map_cell_width / 2.0)
     else:
-    	start_pos_x = start_pos_x - (msg.pose.pose.position.x % Map_Cell_Width) + Map_Cell_Width
+    	start_pos_x = start_pos_x - (msg.pose.pose.position.x % map_cell_width) + (3.0 * map_cell_width / 2.0)
     
-    if msg.pose.pose.position.y % Map_Cell_Height < (Map_Cell_Height / 2.0):
-    	start_pos_y = start_pos_y - (msg.pose.pose.position.y % Map_Cell_Height)
+    if msg.pose.pose.position.y % map_cell_height < (map_cell_height / 2.0):
+    	start_pos_y = start_pos_y - (msg.pose.pose.position.y % (map_cell_width / 2.0)) + (map_cell_width / 2.0)
     else:
-    	start_pos_y = start_pos_y - (msg.pose.pose.position.y % Map_Cell_Height) + Map_Cell_Height
-    
+    	start_pos_y = start_pos_y - (msg.pose.pose.position.y % map_cell_width) + (3.0 * map_cell_width / 2.0)
     #if msg.pose.pose.position.x % .2 < .1:
     #	start_pos_x = (msg.pose.pose.position.x / .2)
     #else:
@@ -385,23 +412,23 @@ def set_initial_pose (msg):
 
 # set and print goalpose
 def set_goal_pose (msg):
-    global Map_Cell_Width
-    global Map_Cell_Height
+    global map_cell_width
+    global map_cell_height
     global start_pos_flag
     global end_pos_flag
 
     end_pos_x = msg.pose.position.x
     end_pos_y = msg.pose.position.y
     #set initial pose values
-    if msg.pose.position.x % Map_Cell_Width < .1:
-        end_pos_x = end_pos_x - (msg.pose.position.x % Map_Cell_Width)
+    if msg.pose.position.x % map_cell_width < (map_cell_width / 2.0):
+        end_pos_x = end_pos_x - (msg.pose.position.x % (map_cell_width / 2.0)) + (map_cell_width / 2.0)
     else:
-        end_pos_x = end_pos_x - (msg.pose.position.x % Map_Cell_Width) + Map_Cell_Width
+        end_pos_x = end_pos_x - (msg.pose.position.x % map_cell_width) + (3.0 * map_cell_width / 2.0)
     
-    if msg.pose.position.y % Map_Cell_Height < .1:
-        end_pos_y = end_pos_y - (msg.pose.position.y % Map_Cell_Height)
+    if msg.pose.position.y % map_cell_height < (map_cell_height / 2.0):
+        end_pos_y = end_pos_y - (msg.pose.position.y % (map_cell_height / 2.0)) + (map_cell_width / 2.0)
     else:
-        end_pos_y = end_pos_y - (msg.pose.position.y % Map_Cell_Height) + Map_Cell_Height
+        end_pos_y = end_pos_y - (msg.pose.position.y % map_cell_height) + (3.0 * map_cell_height / 2.0)
         
         
     end.point.x = end_pos_x
@@ -434,8 +461,15 @@ def astar_init():
     global pose
     global odom_tf
     global odom_list
-    global Map_Cell_Width
-    global Map_Cell_Height
+
+    global map_width
+    global map_height
+    global map_cell_width
+    global map_cell_height
+    global map_resolution
+    global map_x_offset
+    global map_y_offset
+    
     global diagonal_distance
     global h_const
     global map_data
@@ -466,17 +500,13 @@ def astar_init():
     end_pos_flag = False
     
     waypoints = []
-    
-    Map_Cell_Width = 0.2
-    Map_Cell_Height = 0.2
-    diagonal_distance = sqrt(Map_Cell_Width**2 + Map_Cell_Height**2)
 
     #f(n) = g(n) + h'(n)
     #h'(n) = h(n) / h_const
     #    h_const < 1 -> f(n) becomes heuristic dominant = greedy
     #    h_const > 1 -> f(n) becomes movement cost dominant = optimal search (more time!!)
     #        2 -> seems safe enough
-    h_const = 3
+    h_const = 1.02
         
     #Publishers: 
     pub_start    = rospy.Publisher('/start', GridCells) # Publisher for start Point
