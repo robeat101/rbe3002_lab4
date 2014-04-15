@@ -66,8 +66,8 @@ def AStar_search(start, end):
             PublishGridCells(pub_explored, ExpandedSet)
             PublishGridCells(pub_frontier, FrontierSet)
             #Return path (less one garbage node that is appended) 
-            return path[1:-1]
         
+            return path[1:-1]
         #Else, move node from frontier to explored
         FrontierSet.remove(current)
         if not (current.poseEqual(start) or current.poseEqual(end)):
@@ -236,15 +236,16 @@ class Direction():
 def getWaypoints(path):
     waypoints = []
     direction = Direction()
-    previous = direction.start
+    previous = start
+    previous.direction = direction.start
     
     for node in path:
-        if(node.step_direction != previous):
-            waypoints.append(node.parent)
-            previous = node.step_direction
+        if(node.step_direction != previous.step_direction):
+            waypoints.append(node)
+            previous = node
         else:
             continue
-    
+    waypoints = waypoints[1::]
     waypoints.append(start)
     waypoints.append(end)
         
@@ -466,7 +467,7 @@ def astar_init():
     #    h_const < 1 -> f(n) becomes heuristic dominant = greedy
     #    h_const > 1 -> f(n) becomes movement cost dominant = optimal search (more time!!)
     #        2 -> seems safe enough
-    h_const = 2 
+    h_const = 2
         
     #Publishers: 
     pub_start    = rospy.Publisher('/start', GridCells) # Publisher for start Point
