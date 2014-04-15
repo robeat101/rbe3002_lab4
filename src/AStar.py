@@ -61,7 +61,7 @@ def AStar_search(start, end):
                 if end.poseEqual(frontier):
                     FrontierSet.remove(frontier)
 
-            #rospy.sleep(rospy.Duration(.2,0))
+            rospy.sleep(rospy.Duration(.2,0))
             #update gridcells
             PublishGridCells(pub_explored, ExpandedSet)
             PublishGridCells(pub_frontier, FrontierSet)
@@ -308,8 +308,8 @@ def run_Astar():
     print "Displaying Path"
     
     PublishGridCells(pub_path, path)
+    rospy.sleep(rospy.Duration(1, 0))
     
-    blah = raw_input("Press enter to display waypoints:")
     PublishGridCells(pub_path, [])
     
     print "Showing Waypoints"
@@ -467,7 +467,7 @@ def astar_init():
     #    h_const < 1 -> f(n) becomes heuristic dominant = greedy
     #    h_const > 1 -> f(n) becomes movement cost dominant = optimal search (more time!!)
     #        2 -> seems safe enough
-    h_const = 2
+    h_const = 3
         
     #Publishers: 
     pub_start    = rospy.Publisher('/start', GridCells) # Publisher for start Point
