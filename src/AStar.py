@@ -149,11 +149,11 @@ def ObstacleExpansion(map):
                 if(MapPosStatus[(x,y)] == 100):
                     for node in xy:
                         index = (y + node[1]) * map.info.width + (x + node[0])
-                        if(index > 0 and index < len(new_data)):
+                        if(index >= 0 and index < len(new_data)):
                             new_data[index] =  100
         new_map.data = tuple(new_data)
         pub_map.publish(new_map)
-        rospy.sleep(rospy.Duration(1,0))
+        rospy.sleep(rospy.Duration(4,0))
         return new_map
     
                 
@@ -192,29 +192,70 @@ def map_function(msg):
     map_y_offset = round(msg.info.origin.position.y + (0.5 * map_resolution), 1)
 
     #for Occupancy Grid Optimization
-    map_scale = map_scaled_resolution / map_resolution #scale factor
-    map_scaled_width = map_width * map_scale
-    map_scaled_height = map_height * map_scale
-    map_scaled_cell_width = map_cell_width * map_scale
-    map_scaled_cell_height = map_cell_height * map_scale
-    map_scaled_x_offset = map_x_offset * map_scale
-    map_scaled_y_offset = map_y_offset * map_scale
-
+    map_scale = int(round(map_scaled_resolution / map_resolution)) #scale factor
+    new_map = copy.copy(msg)
+    
+    new_map.info.width = int(round(map_width / map_scale, 0))
+    new_map.info.height = int(round(map_height / map_scale, 0))
+    new_map.info.resolution = map_scaled_resolution 
+    
+    map_scaled_width = new_map.info.width
+    map_scaled_height = new_map.info.height
+    map_scaled_cell_width = map_scaled_resolution
+    map_scaled_cell_height = map_scaled_resolution
+    
+    map_scaled_x_offset = map_x_offset
+    map_scaled_y_offset = map_y_offset
     diagonal_distance = sqrt(map_scaled_cell_width**2 + map_scaled_cell_height**2)
-
+    
+    MapPosStatus = {}
+    for x in xrange(0, map_scaled_width):
+        for y in xrange(0, map_scaled_height):
+            index = y * map_scaled_width + x
+            MapPosStatus[(x,y)] = 0
+    xy = []
+    for i in xrange(0, map_scale):
+        for j in xrange(0, map_scale):
+            xy.append((i,j));
+    
+    new_data = [0,] * (map_scaled_width * map_scaled_height)
+    for x in xrange(0, map_scaled_width):
+        for y in xrange(0, map_scaled_height):
+            cost = 0
+            nodes = 0
+            for node in xy:
+                nodex = x * map_scale + node[0]
+                nodey = y * map_scale + node[1]
+                index = nodey * map_width + nodex
+                if(index >= 0 and index < len(map_data)):
+                    if(map_data[index] >= 0):
+                        cost = cost + map_data[index]
+                    else:
+                        cost = cost + 20
+                    nodes = nodes+1
+            cost = cost/nodes
+            if(cost > 75):
+                cost = 100
+            new_data[y * map_scaled_width + x] = cost
+            
+    
+    new_map.data = tuple(new_data)
+    map_data = new_map.data
+    pub_map.publish(new_map)
+    print "Done"
 
 #this needs to be universalized for other maps
 def getMapIndex(node):
-    global map_width
-    global map_x_offset
-    global map_y_offset
-    global map_resolution
+    global map_scaled_width
+    global map_scaled_x_offset
+    global map_scaled_y_offset
+    global map_scaled_resolution
     #tiles were being "seen" as one to the right of where they actually are -> the +0.5
     #print "node.point.y: " + str(node.point.y)
     #print "map_y_offset: " + str(map_y_offset)
     #print "map_resolution: " + str(map_resolution)
-    a = (((node.point.y - map_y_offset) / map_resolution) * map_width)
-    a = a + ((node.point.x - map_x_offset) / map_resolution)
+    a = (((node.point.y - map_scaled_y_offset) / map_scaled_resolution) * map_scaled_width)
+    a = a + ((node.point.x - map_scaled_x_offset) / map_scaled_resolution)
     return int(round(a,2))
 
 #Takes in current node, returns list of possible directional movements
@@ -442,6 +483,11 @@ def set_initial_pose (msg):
     global start_pos_y
     global start_pos_flag
     global end_pos_flag
+    global robot_resolution
+    
+    map_scaled_cell_width = robot_resolution
+    map_scaled_cell_height = robot_resolution
+    
     #global start_pos_z
     #global start_orient_x
     #global start_orient_y
@@ -500,7 +546,10 @@ def set_goal_pose (msg):
     global map_scaled_cell_height
     global start_pos_flag
     global end_pos_flag
-
+    global robot_resolution
+    
+    map_scaled_cell_width = robot_resolution
+    map_scaled_cell_height = robot_resolution
     end_pos_x = msg.pose.position.x
     end_pos_y = msg.pose.position.y
     #set initial pose values

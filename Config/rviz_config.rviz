@@ -7,9 +7,8 @@ Panels:
         - /Global Options1
         - /Status1
         - /Map1
-        - /Frontier1
-        - /Path1
         - /Optimized Map1
+        - /Optimized Map1/Status1
       Splitter Ratio: 0.5
     Tree Height: 463
   - Class: rviz/Selection
@@ -76,7 +75,7 @@ Visualization Manager:
       Value: true
     - Alpha: 1
       Class: rviz/GridCells
-      Color: 255; 255; 127
+      Color: 230; 238; 70
       Enabled: true
       Name: Explored
       Topic: /explored
@@ -126,7 +125,7 @@ Visualization Manager:
   Value: true
   Views:
     Current:
-      Angle: 0
+      Angle: 0.0350002
       Class: rviz/TopDownOrtho
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.06
@@ -135,7 +134,7 @@ Visualization Manager:
         Value: false
       Name: Current View
       Near Clip Distance: 0.01
-      Scale: 71.813
+      Scale: 23.241
       Target Frame: <Fixed Frame>
       Value: TopDownOrtho (rviz)
       X: 0
