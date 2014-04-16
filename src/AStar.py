@@ -2,6 +2,7 @@
 
 import rospy, tf
 import Movement
+import copy
 from nav_msgs.msg import GridCells, OccupancyGrid
 from geometry_msgs.msg import Point, PoseWithCovarianceStamped, PoseStamped
 from numpy import ma
@@ -122,11 +123,39 @@ def AStar_search(start, end):
             somethingWasUpdatedFlag = False
     return None
 
-def ObstacleExpansion(msg, robot_resolution):
-    if(robot_resolution >= round(msg.info.resolution, 3)):
-        return msg
+def ObstacleExpansion(map, robot_resolution):
+    global pub_map
+    
+    if(robot_resolution < round(map.info.resolution, 3)):
+        return map
     else:
-        return msg
+        target_exp = round(robot_resolution/map.info.resolution, 0)
+        new_map = copy.copy(map)
+        
+        MapPosStatus = {}
+        for x in xrange(0, map.info.width):
+            for y in xrange(0, map.info.height):
+                index = y * map.info.width + x
+                MapPosStatus[(x,y)] = map.data[index]
+        
+        
+        new_data = list(new_map.data)
+        xy = ((-1,-1),(-1,0),(-1,1),
+              (1,-1),(1,0),(1,1),
+              (0,-1),(0,0),(0,1))
+        for x in xrange(0, map.info.width):
+            for y in xrange(0, map.info.height):
+                if(MapPosStatus[(x,y)] == 100):
+                    for node in xy:
+                        index = (y + node[1]) * map.info.width + (x + node[0])
+                        if(index > 0 and index < len(new_data)):
+                            new_data[index] =  100
+        new_map.data = tuple(new_data)
+        pub_map.publish(new_map)
+        rospy.sleep(rospy.Duration(1,0))
+        return new_map
+    
+                
 
 #Map callback function
 def map_function(msg):
@@ -140,6 +169,7 @@ def map_function(msg):
     global map_y_offset
     global diagonal_distance
     global robot_resolution
+    
     msg = ObstacleExpansion(msg, robot_resolution)
     map_data = msg.data
     map_width = msg.info.width
@@ -148,7 +178,7 @@ def map_function(msg):
     map_cell_width = map_resolution
     map_cell_height = map_resolution
     map_x_offset = round(msg.info.origin.position.x + (0.5 * map_resolution), 1)
-    map_y_offset = round(msg.info.origin.position.y + (0.5 * map_resolution),1)
+    map_y_offset = round(msg.info.origin.position.y + (0.5 * map_resolution), 1)
 
     diagonal_distance = sqrt(map_cell_width**2 + map_cell_height**2)
 
@@ -160,9 +190,9 @@ def getMapIndex(node):
     global map_y_offset
     global map_resolution
     #tiles were being "seen" as one to the right of where they actually are -> the +0.5
-    print "node.point.y: " + str(node.point.y)
-    print "map_y_offset: " + str(map_y_offset)
-    print "map_resolution: " + str(map_resolution)
+    #print "node.point.y: " + str(node.point.y)
+    #print "map_y_offset: " + str(map_y_offset)
+    #print "map_resolution: " + str(map_resolution)
     a = (((node.point.y - map_y_offset) / map_resolution) * map_width)
     a = a + ((node.point.x - map_x_offset) / map_resolution)
     return int(round(a,2))
@@ -508,12 +538,12 @@ def astar_init():
     global start
     global end
     global waypoints
-    
+    global pub_map
     global start_pos_flag
     global end_pos_flag
     global AStar_Done
     global robot_resolution
-    robot_resolution = 0.2
+    robot_resolution = 0.4
     AStar_Done = False
     
     
@@ -548,14 +578,13 @@ def astar_init():
     pub_path     = rospy.Publisher('/path' , GridCells) # Publisher for Final Path
     pub_explored = rospy.Publisher('/explored', GridCells) # Publisher explored GridCells
     pub_frontier = rospy.Publisher('/frontier', GridCells) # Publisher explored GridCells
-    pub_map      = rospy.Publisher('/map_optimized', OccupancyGrid)
+    pub_map      = rospy.Publisher('/map_optimized', OccupancyGrid, latch=True)
     
     #Subscribers:
     sub = rospy.Subscriber('/initialpose', PoseWithCovarianceStamped, set_initial_pose, queue_size=1)
     sub = rospy.Subscriber('move_base_simple/goal', PoseStamped, set_goal_pose, queue_size=1)  
     sub = rospy.Subscriber('/map', OccupancyGrid, map_function, queue_size=1)
     
-    pub_map.publish(new_map)
     # Use this command to make the program wait for some seconds
     rospy.sleep(rospy.Duration(1, 0))
     
