@@ -81,7 +81,12 @@ def AStar_search(start, end):
         #Check for possible 8-directional moves
         repeatedNode_flag = False
         somethingWasUpdatedFlag = False
-        for node in WhereToGo(current):
+        
+        nodesToGo = WhereToGo(current)
+        if nodesToGo == []:
+            return []
+            
+        for node in nodesToGo:
             #Ignore if node is expanded
             for expanded in ExpandedSet:
                 if node.poseEqual(expanded):
@@ -117,7 +122,13 @@ def AStar_search(start, end):
             somethingWasUpdatedFlag = False
     return None
 
+def ObstacleExpansion(msg, robot_resolution):
+    if(robot_resolution >= round(msg.info.resolution, 3)):
+        return msg
+    else:
+        return msg
 
+#Map callback function
 def map_function(msg):
     global map_data
     global map_width
@@ -128,7 +139,8 @@ def map_function(msg):
     global map_x_offset
     global map_y_offset
     global diagonal_distance
-
+    global robot_resolution
+    msg = ObstacleExpansion(msg, robot_resolution)
     map_data = msg.data
     map_width = msg.info.width
     map_height = msg.info.height
@@ -337,16 +349,37 @@ def run_Astar():
     print start.h
     print end.point.x - start.point.x
     print end.point.y - start.point.y
-    print "Displaying Path"
     
-    PublishGridCells(pub_path, path)
-    rospy.sleep(rospy.Duration(1, 0))
-    
-    PublishGridCells(pub_path, [])
-    
-    print "Showing Waypoints"
-    waypoints = getWaypoints(path)
-    PublishWayPoints(pub_path, waypoints)
+    if path == []:
+        print "No Path!"
+        node = AStarNode(-20, -20)
+        free = set()
+        unknown = set()
+        obstacle = set()
+        for i in xrange(0, 190):
+            for j in yrange(0, 160):
+                a = getMapIndex(node)
+                if(a == 100):
+                    obstacle.add(node)
+                if(a == -1):
+                    unknown.add(node)
+                if(a == 0):
+                    free.add(node)    
+                node.point.y = node.point.y + map_resolution
+            node.point.x = node.point.x + map_resolution
+                
+                
+    else:
+        print "Displaying Path"
+        PublishGridCells(pub_path, path)
+        rospy.sleep(rospy.Duration(1, 0))
+        
+        PublishGridCells(pub_path, [])
+        
+        print "Showing Waypoints"
+        waypoints = getWaypoints(path)
+        PublishWayPoints(pub_path, waypoints)
+        
 
 #####################################3
 # set and print initialpose
@@ -479,6 +512,8 @@ def astar_init():
     global start_pos_flag
     global end_pos_flag
     global AStar_Done
+    global robot_resolution
+    robot_resolution = 0.2
     AStar_Done = False
     
     
@@ -513,13 +548,14 @@ def astar_init():
     pub_path     = rospy.Publisher('/path' , GridCells) # Publisher for Final Path
     pub_explored = rospy.Publisher('/explored', GridCells) # Publisher explored GridCells
     pub_frontier = rospy.Publisher('/frontier', GridCells) # Publisher explored GridCells
-       
+    pub_map      = rospy.Publisher('/map_optimized', OccupancyGrid)
+    
     #Subscribers:
     sub = rospy.Subscriber('/initialpose', PoseWithCovarianceStamped, set_initial_pose, queue_size=1)
     sub = rospy.Subscriber('move_base_simple/goal', PoseStamped, set_goal_pose, queue_size=1)  
     sub = rospy.Subscriber('/map', OccupancyGrid, map_function, queue_size=1)
     
-    
+    pub_map.publish(new_map)
     # Use this command to make the program wait for some seconds
     rospy.sleep(rospy.Duration(1, 0))
     
