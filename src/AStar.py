@@ -20,13 +20,13 @@ def heuristic(current, end):
 
 #takes in Start and End AStar nodes.
 def AStar_search(start, end):
-    global map_width
-    global map_height
-    global map_cell_width
-    global map_cell_height
-    global map_resolution
-    global map_x_offset
-    global map_y_offset
+    global map_scaled_width
+    global map_scaled_height
+    global map_scaled_cell_width
+    global map_scaled_cell_height
+    global map_scaled_resolution
+    global map_scaled_x_offset
+    global map_scaled_y_offset
     global pub_frontier
     #Set Start and End values
     start.g = 0
@@ -169,18 +169,37 @@ def map_function(msg):
     global map_y_offset
     global diagonal_distance
     global robot_resolution
+
+    #for Occupancy Grid Optimization
+    global map_scale
+    global map_scaled_width
+    global map_scaled_height
+    global map_scaled_cell_width
+    global map_scaled_cell_height
+    global map_scaled_resolution #set to robot_resolution
+    global map_scaled_x_offset
+    global map_scaled_y_offset
     
     msg = ObstacleExpansion(msg, robot_resolution)
     map_data = msg.data
+    map_resolution = round(msg.info.resolution, 3)
     map_width = msg.info.width
     map_height = msg.info.height
-    map_resolution = round(msg.info.resolution, 3)
     map_cell_width = map_resolution
     map_cell_height = map_resolution
     map_x_offset = round(msg.info.origin.position.x + (0.5 * map_resolution), 1)
     map_y_offset = round(msg.info.origin.position.y + (0.5 * map_resolution), 1)
 
-    diagonal_distance = sqrt(map_cell_width**2 + map_cell_height**2)
+    #for Occupancy Grid Optimization
+    map_scale = map_scaled_resolution / map_resolution #scale factor
+    map_scaled_width = map_width * map_scale
+    map_scaled_height = map_height * map_scale
+    map_scaled_cell_width = map_cell_width * map_scale
+    map_scaled_cell_height = map_cell_height * map_scale
+    map_scaled_x_offset = map_x_offset * map_scale
+    map_scaled_y_offset = map_y_offset * map_scale
+
+    diagonal_distance = sqrt(map_scaled_cell_width**2 + map_scaled_cell_height**2)
 
 
 #this needs to be universalized for other maps
@@ -199,42 +218,42 @@ def getMapIndex(node):
 
 #Takes in current node, returns list of possible directional movements
 def WhereToGo(node):
-    global map_cell_width
-    global map_cell_height
+    global map_scaled_cell_width
+    global map_scaled_cell_height
     global diagonal_distance
     possibleNodes = []
 
     direction = Direction()
     #Hacky code begins
-    North = AStarNode(round(node.point.x,3), round(node.point.y+map_cell_height,3))
-    North.g = node.g + map_cell_height
+    North = AStarNode(round(node.point.x,3), round(node.point.y+map_scaled_cell_height,3))
+    North.g = node.g + map_scaled_cell_height
     North.step_direction = direction.n
     
-    NorthEast = AStarNode(round(node.point.x+map_cell_width,3), round(node.point.y+map_cell_height,3))
+    NorthEast = AStarNode(round(node.point.x+map_scaled_cell_width,3), round(node.point.y+map_scaled_cell_height,3))
     NorthEast.g = node.g + diagonal_distance
     NorthEast.step_direction = direction.ne
     
-    East = AStarNode(round(node.point.x+map_cell_width,3), round(node.point.y, 3))
-    East.g = node.g + map_cell_width
+    East = AStarNode(round(node.point.x+map_scaled_cell_width,3), round(node.point.y, 3))
+    East.g = node.g + map_scaled_cell_width
     East.step_direction = direction.e
     
-    SouthEast = AStarNode(round(node.point.x+map_cell_width,3), round(node.point.y-map_cell_height,3))
+    SouthEast = AStarNode(round(node.point.x+map_scaled_cell_width,3), round(node.point.y-map_scaled_cell_height,3))
     SouthEast.g = node.g + diagonal_distance
     SouthEast.step_direction = direction.se
     
-    South = AStarNode(round(node.point.x, 3), round(node.point.y-map_cell_height,3))
-    South.g = node.g + map_cell_height
+    South = AStarNode(round(node.point.x, 3), round(node.point.y-map_scaled_cell_height,3))
+    South.g = node.g + map_scaled_cell_height
     South.step_direction = direction.s
     
-    SouthWest = AStarNode(round(node.point.x-map_cell_width,3), round(node.point.y-map_cell_height,3))
+    SouthWest = AStarNode(round(node.point.x-map_scaled_cell_width,3), round(node.point.y-map_scaled_cell_height,3))
     SouthWest.g = node.g + diagonal_distance
     SouthWest.step_direction = direction.sw
     
-    West = AStarNode(round(node.point.x-map_cell_width,3), round(node.point.y, 3))
-    West.g = node.g + map_cell_width
+    West = AStarNode(round(node.point.x-map_scaled_cell_width,3), round(node.point.y, 3))
+    West.g = node.g + map_scaled_cell_width
     West.step_direction = direction.w
     
-    NorthWest = AStarNode(round(node.point.x-map_cell_width,3), round(node.point.y+map_cell_height,3))
+    NorthWest = AStarNode(round(node.point.x-map_scaled_cell_width,3), round(node.point.y+map_scaled_cell_height,3))
     NorthWest.g = node.g + diagonal_distance
     NorthWest.step_direction = direction.nw
 
@@ -258,19 +277,19 @@ def WhereToGo(node):
     return possibleNodes
 
 def move_cost(node, next):
-    global map_cell_width
-    global map_cell_height
+    global map_scaled_cell_width
+    global map_scaled_cell_height
     global diagonal_distance
     #determine if diagonal
     #if change in x
-    diagonal = round(abs(node.point.x - next.point.x),3) == round(map_cell_width, 3)
+    diagonal = round(abs(node.point.x - next.point.x),3) == round(map_scaled_cell_width, 3)
     #if change in x and change in y
-    diagonal = diagonal and round(abs(node.point.y - next.point.y),3) == round(map_cell_height,3)
+    diagonal = diagonal and round(abs(node.point.y - next.point.y),3) == round(map_scaled_cell_height,3)
     if diagonal:
         #print diagonal_distance
-        return round(2 * map_resolution, 3)
+        return round(2 * map_scaled_resolution, 3)
     else:
-        return round(map_resolution, 3)
+        return round(map_scaled_resolution, 3)
 class AStarNode():
     
     def __init__(self, x, y):
@@ -324,13 +343,13 @@ def getWaypoints(path):
 
 #Publish Explored Cells function
 def PublishGridCells(publisher, nodes):
-    global map_cell_width
-    global map_cell_height
+    global map_scaled_cell_width
+    global map_scaled_cell_height
     #Initialize gridcell
     gridcells = GridCells()
     gridcells.header.frame_id = 'map'
-    gridcells.cell_width = map_cell_width
-    gridcells.cell_height = map_cell_height
+    gridcells.cell_width = map_scaled_cell_width
+    gridcells.cell_height = map_scaled_cell_height
 
     #Iterate through list of nodes
     for node in nodes: 
@@ -348,8 +367,8 @@ def PublishWayPoints(publisher, nodes):
 	#Initialize gridcell
 	gridcells = GridCells()
 	gridcells.header.frame_id = 'map'
-	gridcells.cell_width = map_cell_width
-	gridcells.cell_height = map_cell_height
+	gridcells.cell_width = map_scaled_cell_width
+	gridcells.cell_height = map_scaled_cell_height
 
 	#Iterate through list of nodes
 	for node in nodes: 
@@ -414,8 +433,8 @@ def run_Astar():
 #####################################3
 # set and print initialpose
 def set_initial_pose (msg):
-    global map_cell_width
-    global map_cell_height
+    global map_scaled_cell_width
+    global map_scaled_cell_height
     global start_pos_x
     global start_pos_y
     global start_pos_flag
@@ -429,15 +448,15 @@ def set_initial_pose (msg):
     start_pos_x = msg.pose.pose.position.x
     start_pos_y = msg.pose.pose.position.y
     #set initial pose values
-    if msg.pose.pose.position.x % map_cell_width < (map_cell_width / 2.0):
-    	start_pos_x = start_pos_x - (msg.pose.pose.position.x % (map_cell_width)) #+ (map_cell_width / 2.0)
+    if msg.pose.pose.position.x % map_scaled_cell_width < (map_scaled_cell_width / 2.0):
+    	start_pos_x = start_pos_x - (msg.pose.pose.position.x % (map_scaled_cell_width)) #+ (map_cell_width / 2.0)
     else:
-    	start_pos_x = start_pos_x - (msg.pose.pose.position.x % map_cell_width) + map_cell_width #+ (3.0 * map_cell_width / 2.0)
+    	start_pos_x = start_pos_x - (msg.pose.pose.position.x % map_scaled_cell_width) + map_scaled_cell_width #+ (3.0 * map_cell_width / 2.0)
     
-    if msg.pose.pose.position.y % map_cell_height < (map_cell_height / 2.0):
-    	start_pos_y = start_pos_y - (msg.pose.pose.position.y % (map_cell_width)) #+ (map_cell_width / 2.0)
+    if msg.pose.pose.position.y % map_scaled_cell_height < (map_scaled_cell_height / 2.0):
+    	start_pos_y = start_pos_y - (msg.pose.pose.position.y % (map_scaled_cell_width)) #+ (map_cell_width / 2.0)
     else:
-    	start_pos_y = start_pos_y - (msg.pose.pose.position.y % map_cell_width) + map_cell_width#+ (3.0 * map_cell_width / 2.0)
+    	start_pos_y = start_pos_y - (msg.pose.pose.position.y % map_scaled_cell_width) + map_scaled_cell_width#+ (3.0 * map_cell_width / 2.0)
     #if msg.pose.pose.position.x % .2 < .1:
     #	start_pos_x = (msg.pose.pose.position.x / .2)
     #else:
@@ -474,23 +493,23 @@ def set_initial_pose (msg):
 
 # set and print goalpose
 def set_goal_pose (msg):
-    global map_cell_width
-    global map_cell_height
+    global map_scaled_cell_width
+    global map_scaled_cell_height
     global start_pos_flag
     global end_pos_flag
 
     end_pos_x = msg.pose.position.x
     end_pos_y = msg.pose.position.y
     #set initial pose values
-    if msg.pose.position.x % map_cell_width < (map_cell_width / 2.0):
-        end_pos_x = end_pos_x - (msg.pose.position.x % map_cell_width)
+    if msg.pose.position.x % map_scaled_cell_width < (map_scaled_cell_width / 2.0):
+        end_pos_x = end_pos_x - (msg.pose.position.x % map_scaled_cell_width)
     else:
-        end_pos_x = end_pos_x - (msg.pose.position.x % map_cell_width) + map_cell_width
+        end_pos_x = end_pos_x - (msg.pose.position.x % map_scaled_cell_width) + map_scaled_cell_width
     
-    if msg.pose.position.y % map_cell_height < (map_cell_height / 2.0):
-        end_pos_y = end_pos_y - (msg.pose.position.y % map_cell_height)
+    if msg.pose.position.y % map_scaled_cell_height < (map_scaled_cell_height / 2.0):
+        end_pos_y = end_pos_y - (msg.pose.position.y % map_scaled_cell_height)
     else:
-        end_pos_y = end_pos_y - (msg.pose.position.y % map_cell_height) + map_cell_height
+        end_pos_y = end_pos_y - (msg.pose.position.y % map_scaled_cell_height) + map_scaled_cell_height
         
         
     end.point.x = round(end_pos_x,3)
@@ -531,6 +550,17 @@ def astar_init():
     global map_resolution
     global map_x_offset
     global map_y_offset
+
+    #for Occupancy Grid Optimization
+    global map_scale
+    global map_scaled_width
+    global map_scaled_height
+    global map_scaled_cell_width
+    global map_scaled_cell_height
+    global map_scaled_resolution
+    global map_scaled_x_offset
+    global map_scaled_y_offset
+    global map_scaled_flag
     
     global diagonal_distance
     global h_const
@@ -543,7 +573,10 @@ def astar_init():
     global end_pos_flag
     global AStar_Done
     global robot_resolution
-    robot_resolution = 0.4
+
+    map_scaled_flag = False
+    robot_resolution = 0.2
+    map_scaled_resolution = robot_resolution
     AStar_Done = False
     
     
