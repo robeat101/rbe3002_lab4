@@ -123,13 +123,14 @@ def AStar_search(start, end):
             somethingWasUpdatedFlag = False
     return None
 
-def ObstacleExpansion(map, robot_resolution):
+def ObstacleExpansion(map):
     global pub_map
+    global robot_resolution
     
     if(robot_resolution < round(map.info.resolution, 3)):
         return map
     else:
-        target_exp = round(robot_resolution/map.info.resolution, 0)
+        target_exp = int(round(robot_resolution/map.info.resolution, 0))
         new_map = copy.copy(map)
         
         MapPosStatus = {}
@@ -137,12 +138,12 @@ def ObstacleExpansion(map, robot_resolution):
             for y in xrange(0, map.info.height):
                 index = y * map.info.width + x
                 MapPosStatus[(x,y)] = map.data[index]
-        
-        
+        xy = []
+        for i in xrange(-target_exp, target_exp+1):
+            for j in xrange(-target_exp, target_exp+1):
+                xy.append((i,j));
         new_data = list(new_map.data)
-        xy = ((-1,-1),(-1,0),(-1,1),
-              (1,-1),(1,0),(1,1),
-              (0,-1),(0,0),(0,1))
+        
         for x in xrange(0, map.info.width):
             for y in xrange(0, map.info.height):
                 if(MapPosStatus[(x,y)] == 100):
@@ -180,7 +181,7 @@ def map_function(msg):
     global map_scaled_x_offset
     global map_scaled_y_offset
     
-    msg = ObstacleExpansion(msg, robot_resolution)
+    msg = ObstacleExpansion(msg)
     map_data = msg.data
     map_resolution = round(msg.info.resolution, 3)
     map_width = msg.info.width
@@ -350,7 +351,9 @@ def PublishGridCells(publisher, nodes):
     gridcells.header.frame_id = 'map'
     gridcells.cell_width = map_scaled_cell_width
     gridcells.cell_height = map_scaled_cell_height
-
+    
+    if nodes == None:
+        return
     #Iterate through list of nodes
     for node in nodes: 
         point = Point()
@@ -406,7 +409,7 @@ def run_Astar():
         unknown = set()
         obstacle = set()
         for i in xrange(0, 190):
-            for j in yrange(0, 160):
+            for j in xrange(0, 160):
                 a = getMapIndex(node)
                 if(a == 100):
                     obstacle.add(node)
