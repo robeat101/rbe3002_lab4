@@ -54,7 +54,7 @@ Visualization Manager:
     - Alpha: 0.7
       Class: rviz/Map
       Color Scheme: map
-      Draw Behind: false
+      Draw Behind: true
       Enabled: true
       Name: Map
       Topic: /map
@@ -97,7 +97,7 @@ Visualization Manager:
     - Alpha: 0.7
       Class: rviz/Map
       Color Scheme: map
-      Draw Behind: false
+      Draw Behind: true
       Enabled: true
       Name: Optimized Map
       Topic: /map_optimized
@@ -134,7 +134,7 @@ Visualization Manager:
         Value: false
       Name: Current View
       Near Clip Distance: 0.01
-      Scale: 23.241
+      Scale: 12.4534
       Target Frame: <Fixed Frame>
       Value: TopDownOrtho (rviz)
       X: 0
