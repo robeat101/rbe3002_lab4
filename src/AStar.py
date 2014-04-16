@@ -144,13 +144,15 @@ def ObstacleExpansion(map):
                 xy.append((i,j));
         new_data = list(new_map.data)
         
+        
         for x in xrange(0, map.info.width):
             for y in xrange(0, map.info.height):
-                if(MapPosStatus[(x,y)] == 100):
-                    for node in xy:
-                        index = (y + node[1]) * map.info.width + (x + node[0])
-                        if(index >= 0 and index < len(new_data)):
-                            new_data[index] =  100
+                nodeI = y * map.info.width + x
+                for node in xy:
+                     index = (y + node[1]) * map.info.width + (x + node[0])
+                     if(index >= 0 and index < len(new_data)):
+                         if(map.data[nodeI] > new_data[index]):
+                            new_data[index] =  map.data[nodeI]
         new_map.data = tuple(new_data)
         pub_map.publish(new_map)
         rospy.sleep(rospy.Duration(4,0))
@@ -160,6 +162,8 @@ def ObstacleExpansion(map):
 
 #Map callback function
 def map_function(msg):
+    
+    print "Starting Map_function"
     global map_data
     global map_width
     global map_height
@@ -629,7 +633,7 @@ def astar_init():
     map_scaled_flag = False
     robot_resolution = 0.2
     map_scaled_resolution = robot_resolution
-    AStar_Done = False
+    AStar_Done = True
     
     
    
@@ -666,9 +670,8 @@ def astar_init():
     pub_map      = rospy.Publisher('/map_optimized', OccupancyGrid, latch=True)
     
     #Subscribers:
-    sub = rospy.Subscriber('/initialpose', PoseWithCovarianceStamped, set_initial_pose, queue_size=1)
     sub = rospy.Subscriber('move_base_simple/goal', PoseStamped, set_goal_pose, queue_size=1)  
-    sub = rospy.Subscriber('/map', OccupancyGrid, map_function, queue_size=1)
+    sub = rospy.Subscriber('/move_base/local_costmap/costmap', OccupancyGrid, map_function, queue_size=1)
     
     # Use this command to make the program wait for some seconds
     rospy.sleep(rospy.Duration(1, 0))
@@ -683,7 +686,7 @@ def astar_init():
 # This is the program's main function
 if __name__ == '__main__':
     astar_init()
-    Movement.movement_init()
+    #Movement.movement_init()
     
     rospy.spin()
     
