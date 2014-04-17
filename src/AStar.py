@@ -16,7 +16,7 @@ def heuristic(current, end):
     x_2 = pow((current.point.x - end.point.x), 2)
     y_2 = pow((current.point.y - end.point.y), 2)
     h = sqrt(x_2+y_2)
-    return h / h_const
+    return 20 * h / h_const
 
 #takes in Start and End AStar nodes.
 def AStar_search(start, end):
@@ -71,8 +71,7 @@ def AStar_search(start, end):
             #update gridcells
             PublishGridCells(pub_explored, ExpandedSet)
             PublishGridCells(pub_frontier, FrontierSet)
-            #Return path (less one garbage node that is appended) 
-        
+            #Return path (less one garbage node that is appended and less the start node)
             return path[1:-1]
         #Else, move node from frontier to explored
         FrontierSet.remove(current)
@@ -148,11 +147,11 @@ def ObstacleExpansion(map):
         for x in xrange(0, map.info.width):
             for y in xrange(0, map.info.height):
                 nodeI = y * map.info.width + x
-                for node in xy:
-                     index = (y + node[1]) * map.info.width + (x + node[0])
-                     if(index >= 0 and index < len(new_data)):
-                         if(map.data[nodeI] > new_data[index]):
-                            new_data[index] =  map.data[nodeI]
+                if(MapPosStatus[x,y] == 100):
+                    for node in xy:
+                         index = (y + node[1]) * map.info.width + (x + node[0])
+                         if(index >= 0 and index < len(new_data)):
+                                new_data[index] =  100
         new_map.data = tuple(new_data)
         pub_map.publish(new_map)
         rospy.sleep(rospy.Duration(4,0))
@@ -247,6 +246,11 @@ def map_function(msg):
     map_data = new_map.data
     pub_map.publish(new_map)
     print "Done"
+    if(end_pos_flag == True):
+        w = run_Astar
+        if(w != None):
+            #DriveTowards(w[0])
+        
 
 #this needs to be universalized for other maps
 def getMapIndex(node):
@@ -326,18 +330,16 @@ def move_cost(node, next):
     global map_scaled_cell_width
     global map_scaled_cell_height
     global diagonal_distance
-    #determine if diagonal
-    #if change in x
-    diagonal = round(abs(node.point.x - next.point.x),3) == round(map_scaled_cell_width, 3)
-    #if change in x and change in y
-    diagonal = diagonal and round(abs(node.point.y - next.point.y),3) == round(map_scaled_cell_height,3)
-    if diagonal:
-        #print diagonal_distance
-        return round(2 * map_scaled_resolution, 3)
-    else:
-        return round(map_scaled_resolution, 3)
-class AStarNode():
     
+    if(node.step_direction == next.step_direction):
+        return round(map_scaled_resolution * (20 + map_data[getMapIndex(next)]), 3)
+    else:
+        step_diff = abs(node.step_direction - next.step_direction)
+        if step_diff >= 4: 
+            step_diff = 8 - step_diff
+        return round(map_scaled_resolution * (20 + map_data[getMapIndex(next)]), 3) + step_diff * 2
+    
+class AStarNode():   
     def __init__(self, x, y):
         direction = Direction()
         self.point = Point()
@@ -356,18 +358,17 @@ class AStarNode():
 class Direction():
     def __init__(self):
         self.n = 1
-        self.s = 2
+        self.ne = 2
         self.e = 3
-        self.w = 4
-        self.ne = 5
-        self.se = 6
-        self.nw = 7
-        self.sw = 8
+        self.se = 4
+        self.s = 5
+        self.sw = 6
+        self.w = 7
+        self.nw = 8
         self.start = 0
         
 def getWaypoints(path):
     waypoints = []
-    waypoints.append(start)
     direction = Direction()
     previous = start
     previous.direction = direction.start
@@ -378,10 +379,6 @@ def getWaypoints(path):
             previous = node
         else:
             continue
-    if len(waypoints) > 1: 
-        a = list()
-        a.append(waypoints[0])
-        a.extend(waypoints[2::])
     waypoints.append(end)
     
     AStar_Done = True
@@ -464,6 +461,7 @@ def run_Astar():
                     free.add(node)    
                 node.point.y = node.point.y + map_resolution
             node.point.x = node.point.x + map_resolution
+        return None
                 
                 
     else:
@@ -476,7 +474,7 @@ def run_Astar():
         print "Showing Waypoints"
         waypoints = getWaypoints(path)
         PublishWayPoints(pub_path, waypoints)
-        
+        return waypoints
 
 #####################################3
 # set and print initialpose
@@ -574,12 +572,14 @@ def set_goal_pose (msg):
     print "end_pos_x = ", end.point.x
     print "end_pos_y = ", end.point.y 
     
+    start_pos_flag == True
     end_pos_flag = True
     if(start_pos_flag == True and end_pos_flag == True):
            print 'running Astar'
-           run_Astar();
-           start_pos_flag = False
-           end_pos_flag = False
+           try:
+               waypoints = run_Astar();
+           except:
+               pass
     
 def astar_init():
         # Change this node name to include your username
@@ -670,7 +670,8 @@ def astar_init():
     pub_map      = rospy.Publisher('/map_optimized', OccupancyGrid, latch=True)
     
     #Subscribers:
-    sub = rospy.Subscriber('move_base_simple/goal', PoseStamped, set_goal_pose, queue_size=1)  
+    sub = rospy.Subscriber('/initialpose', PoseWithCovarianceStamped, set_initial_pose, queue_size=1)
+    sub = rospy.Subscriber('/move_base_simple/goal', PoseStamped, set_goal_pose, queue_size=1)  
     sub = rospy.Subscriber('/move_base/local_costmap/costmap', OccupancyGrid, map_function, queue_size=1)
     
     # Use this command to make the program wait for some seconds
