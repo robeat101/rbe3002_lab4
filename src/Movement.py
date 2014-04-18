@@ -95,7 +95,6 @@ def rotate(angle):
     print "basic calcs"
     current_angle = robotyaw
     while(not(abs(current_angle - start_angle) < abs(angle) + 0.2 and abs(current_angle - start_angle) > abs(angle) - 0.2)):
-        print str(current_angle) + "   " + str(start_angle) + "   " + str(angle)
         pub.publish(twist)
         current_angle = robotyaw
         rospy.sleep(rospy.Duration(.2, 0))
@@ -214,12 +213,13 @@ def movement_init():
     global odom_list
 
     cmds = [[1, 0], [2, 0], [0.5, 0], [0, 1], [0, 2], [0, 0], [1, 3.14]]
+    odom_list = tf.TransformListener()
+    odom_tf = tf.TransformBroadcaster()
     
     pub = rospy.Publisher('/cmd_vel_mux/input/teleop', Twist)
     sub = rospy.Subscriber('/odom', Odometry, readOdom, queue_size=5)
     bumper_sub = rospy.Subscriber('/mobile_base/events/bumper', BumperEvent, readBumper)
-    odom_list = tf.TransformListener()
-    odom_tf = tf.TransformBroadcaster()
+
 
     if not odom_tf:
         print "odom_tf not initalized properly. Exiting."

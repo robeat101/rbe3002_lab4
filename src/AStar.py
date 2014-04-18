@@ -335,35 +335,35 @@ def WhereToGo(node):
     NorthWest.step_direction = direction.nw
     
     if(getMapIndex(North) < len(map_data) and getMapIndex(North) > 0):
-        if (map_data[getMapIndex(North)] != 100) and (map_data[getMapIndex(North)] != -1):
+        if (map_data[getMapIndex(North)] != 100):
             possibleNodes.append(North)
             
     if(getMapIndex(NorthEast) < len(map_data) and getMapIndex(NorthEast) > 0):
-        if (map_data[getMapIndex(NorthEast)] != 100) and (map_data[getMapIndex(NorthEast)] != -1):
+        if (map_data[getMapIndex(NorthEast)] != 100):
             possibleNodes.append(NorthEast)
             
     if(getMapIndex(East) < len(map_data) and getMapIndex(East) > 0):
-        if (map_data[getMapIndex(East)] != 100 ) and (map_data[getMapIndex(East)] != -1):
+        if (map_data[getMapIndex(East)] != 100 ):
             possibleNodes.append(East)
             
     if(getMapIndex(SouthEast) < len(map_data) and getMapIndex(SouthEast) > 0):
-        if (map_data[getMapIndex(SouthEast)] != 100) and (map_data[getMapIndex(SouthEast)] != -1):
+        if (map_data[getMapIndex(SouthEast)] != 100):
             possibleNodes.append(SouthEast)
             
     if(getMapIndex(South) < len(map_data) and getMapIndex(South) > 0):
-        if (map_data[getMapIndex(South)] != 100) and (map_data[getMapIndex(South)] != -1):
+        if (map_data[getMapIndex(South)] != 100):
             possibleNodes.append(South)
             
     if(getMapIndex(SouthWest) < len(map_data) and getMapIndex(SouthWest) > 0):
-        if (map_data[getMapIndex(SouthWest)] != 100) and (map_data[getMapIndex(SouthWest)] != -1):
+        if (map_data[getMapIndex(SouthWest)] != 100):
             possibleNodes.append(SouthWest)
             
     if(getMapIndex(West) < len(map_data) and getMapIndex(West) > 0):
-        if (map_data[getMapIndex(West)] != 100) and (map_data[getMapIndex(West)] != -1):
+        if (map_data[getMapIndex(West)] != 100):
             possibleNodes.append(West)
             
     if(getMapIndex(NorthWest) < len(map_data) and getMapIndex(NorthWest) > 0):
-        if (map_data[getMapIndex(NorthWest)] != 100) and (map_data[getMapIndex(NorthWest)] != -1):
+        if (map_data[getMapIndex(NorthWest)] != 100):
             possibleNodes.append(NorthWest)
 
     return possibleNodes
@@ -491,21 +491,22 @@ def run_Astar():
     
     if path == []:
         print "No Path!"
-        node = AStarNode(-20, -20)
-        free = set()
-        unknown = set()
-        obstacle = set()
-        for i in xrange(0, 190):
-            for j in xrange(0, 160):
-                a = getMapIndex(node)
-                if(a == 100):
-                    obstacle.add(node)
-                if(a == -1):
-                    unknown.add(node)
-                if(a == 0):
-                    free.add(node)    
-                node.point.y = node.point.y + map_resolution
-            node.point.x = node.point.x + map_resolution
+        #node = AStarNode(-20, -20)
+        #free = set()
+        #unknown = set()
+        #obstacle = set()
+        #for i in xrange(0, 190):
+        #    for j in xrange(0, 160):
+        #        a = getMapIndex(node)
+        #        if(a == 100):
+        #            obstacle.add(node)
+        #        if(a == -1):
+        #            unknown.add(node)
+        #        if(a == 0):
+        #            free.add(node)    
+        #        node.point.y = node.point.y + map_resolution
+        #    node.point.x = node.point.x + map_resolution
+        Astar_Done_Flag = True
         return None
                 
                 
@@ -524,9 +525,10 @@ def run_Astar():
         euler = tf.transformations.euler_from_quaternion(quaternion)
         w = waypoints[0]
         print "Get alpha"
-        alpha = numpy.arctan2(w.point.x - start.point.x, w.point.y - start.point.y)
-        print "rotate"
-        Movement.rotate(Euler[2] - alpha)
+        alpha = numpy.arctan2((w.point.x - start.point.x) , (w.point.y - start.point.y))
+        print "Euler" + str(euler)
+        print "Alpha" + str(alpha)
+        Movement.rotate(alpha - euler[2])
         print "Drive Straight"
         Movement.driveStraight(.2, straightLineDistance(waypoints[0], waypoints[1]))
         print "Showing Waypoints"
