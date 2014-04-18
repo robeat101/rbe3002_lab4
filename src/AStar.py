@@ -4,7 +4,7 @@ import rospy, tf
 import Movement
 import copy
 from nav_msgs.msg import GridCells, OccupancyGrid
-from geometry_msgs.msg import Point, PoseWithCovarianceStamped, PoseStamped
+from geometry_msgs.msg import Point, PoseWithCovarianceStamped, PoseStamped, Twist, PointStamped
 from numpy import ma
 from math import sqrt
 from __builtin__ import pow
@@ -162,7 +162,7 @@ def ObstacleExpansion(map):
 #Map callback function
 def map_function(msg):
     
-    print "Starting Map_function"
+   # print "Starting Map_function"
     global map_data
     global map_width
     global map_height
@@ -173,6 +173,8 @@ def map_function(msg):
     global map_y_offset
     global diagonal_distance
     global robot_resolution
+    global curr_odom_x
+    global curr_odom_y
 
     #for Occupancy Grid Optimization
     global map_scale
@@ -193,6 +195,21 @@ def map_function(msg):
     map_cell_height = map_resolution
     map_x_offset = round(msg.info.origin.position.x + (0.5 * map_resolution), 1)
     map_y_offset = round(msg.info.origin.position.y + (0.5 * map_resolution), 1)
+
+
+    """curr_odom_x = msg.pose.pose.readOdom().x
+    curr_odom_y = msg.pose.pose.readOdom().y
+    start_pos_x = curr_odom_x.pub_start
+    start_pos_y = curr_odom_y.pub_start
+
+    print start_pos_y
+    print start_pos_x   """
+    
+    
+
+
+
+
 
     #for Occupancy Grid Optimization
     map_scale = int(round(map_scaled_resolution / map_resolution)) #scale factor
@@ -249,6 +266,10 @@ def map_function(msg):
     if(end_pos_flag == True):
         w = run_Astar
         if(w != None):
+         
+        	print run_Astar()
+       		
+        	#movement_init()
             #DriveTowards(w[0])
         
 
@@ -431,6 +452,7 @@ def run_Astar():
     global pub_start
     global pub_end
     global pub_path
+    set_initial_pose()
     PublishGridCells(pub_start, [start])
     PublishGridCells(pub_end, [end])
     PublishGridCells(pub_path, [])
@@ -478,7 +500,7 @@ def run_Astar():
 
 #####################################3
 # set and print initialpose
-def set_initial_pose (msg):
+def set_initial_pose ():
     global map_scaled_cell_width
     global map_scaled_cell_height
     global start_pos_x
@@ -486,6 +508,19 @@ def set_initial_pose (msg):
     global start_pos_flag
     global end_pos_flag
     global robot_resolution
+    
+    (trans, rot) = Movement.returnTransform_mapOdom()
+    print trans
+    print rot
+    
+    #rospy.spin()
+    start.point.x = trans[0]
+    start.point.y = trans[1]
+    start.orientation = rot
+
+    pose_x = trans[0]
+    pose_y = trans[1]
+ 
     
     map_scaled_cell_width = robot_resolution
     map_scaled_cell_height = robot_resolution
@@ -496,18 +531,18 @@ def set_initial_pose (msg):
     #global start_orient_z
     #global start_w
     
-    start_pos_x = msg.pose.pose.position.x
-    start_pos_y = msg.pose.pose.position.y
+    start_pos_x = pose_x
+    start_pos_y = pose_y
     #set initial pose values
-    if msg.pose.pose.position.x % map_scaled_cell_width < (map_scaled_cell_width / 2.0):
-    	start_pos_x = start_pos_x - (msg.pose.pose.position.x % (map_scaled_cell_width)) #+ (map_cell_width / 2.0)
+    if pose_x % map_scaled_cell_width < (map_scaled_cell_width / 2.0):
+    	start_pos_x = start_pos_x - (pose_x % (map_scaled_cell_width)) #+ (map_cell_width / 2.0)
     else:
-    	start_pos_x = start_pos_x - (msg.pose.pose.position.x % map_scaled_cell_width) + map_scaled_cell_width #+ (3.0 * map_cell_width / 2.0)
+    	start_pos_x = start_pos_x - (pose_x % map_scaled_cell_width) + map_scaled_cell_width #+ (3.0 * map_cell_width / 2.0)
     
-    if msg.pose.pose.position.y % map_scaled_cell_height < (map_scaled_cell_height / 2.0):
-    	start_pos_y = start_pos_y - (msg.pose.pose.position.y % (map_scaled_cell_width)) #+ (map_cell_width / 2.0)
+    if pose_y % map_scaled_cell_height < (map_scaled_cell_height / 2.0):
+    	start_pos_y = start_pos_y - (pose_y % (map_scaled_cell_width)) #+ (map_cell_width / 2.0)
     else:
-    	start_pos_y = start_pos_y - (msg.pose.pose.position.y % map_scaled_cell_width) + map_scaled_cell_width#+ (3.0 * map_cell_width / 2.0)
+    	start_pos_y = start_pos_y - (pose_y % map_scaled_cell_width) + map_scaled_cell_width#+ (3.0 * map_cell_width / 2.0)
     #if msg.pose.pose.position.x % .2 < .1:
     #	start_pos_x = (msg.pose.pose.position.x / .2)
     #else:
@@ -536,11 +571,7 @@ def set_initial_pose (msg):
     #print "start_orient_y = ", start_orient_y
     #print "start_orient_z = ", start_orient_z
     #print "start_w = ", start_w
-    if(start_pos_flag == True and end_pos_flag == True):
-           print 'running Astar'
-           run_Astar();
-           start_pos_flag = False
-           end_pos_flag = False
+
 
 # set and print goalpose
 def set_goal_pose (msg):
@@ -552,18 +583,18 @@ def set_goal_pose (msg):
     
     map_scaled_cell_width = robot_resolution
     map_scaled_cell_height = robot_resolution
-    end_pos_x = msg.pose.position.x
-    end_pos_y = msg.pose.position.y
+    end_pos_x = msg.point.x
+    end_pos_y = msg.point.y
     #set initial pose values
-    if msg.pose.position.x % map_scaled_cell_width < (map_scaled_cell_width / 2.0):
-        end_pos_x = end_pos_x - (msg.pose.position.x % map_scaled_cell_width)
+    if msg.point.x % map_scaled_cell_width < (map_scaled_cell_width / 2.0):
+        end_pos_x = end_pos_x - (msg.point.x % map_scaled_cell_width)
     else:
-        end_pos_x = end_pos_x - (msg.pose.position.x % map_scaled_cell_width) + map_scaled_cell_width
+        end_pos_x = end_pos_x - (msg.point.x % map_scaled_cell_width) + map_scaled_cell_width
     
-    if msg.pose.position.y % map_scaled_cell_height < (map_scaled_cell_height / 2.0):
-        end_pos_y = end_pos_y - (msg.pose.position.y % map_scaled_cell_height)
+    if msg.point.y % map_scaled_cell_height < (map_scaled_cell_height / 2.0):
+        end_pos_y = end_pos_y - (msg.point.y % map_scaled_cell_height)
     else:
-        end_pos_y = end_pos_y - (msg.pose.position.y % map_scaled_cell_height) + map_scaled_cell_height
+        end_pos_y = end_pos_y - (msg.point.y % map_scaled_cell_height) + map_scaled_cell_height
         
         
     end.point.x = round(end_pos_x,3)
@@ -571,8 +602,11 @@ def set_goal_pose (msg):
     
     print "end_pos_x = ", end.point.x
     print "end_pos_y = ", end.point.y 
+    set_initial_pose()
+     
     
-    start_pos_flag == True
+    
+    start_pos_flag = True
     end_pos_flag = True
     if(start_pos_flag == True and end_pos_flag == True):
            print 'running Astar'
@@ -580,7 +614,66 @@ def set_goal_pose (msg):
                waypoints = run_Astar();
            except:
                pass
-    
+  
+
+#-------------------------//-----------------------------------------------------------//----------------
+# Robot Drive Functions
+
+def pubTwist(linear, angular):
+  global pub_tf
+  global odom_tf
+
+  twist_msg = Twist();		#Create Twist Message
+
+  twist_msg.linear.x = linear	#Populate message with data
+  twist_msg.angular.z = angular
+
+
+  pub_tf.publish(twist_msg)	
+
+
+
+def motorDrive_waypoint(): 
+	global pub
+	global pose
+	global odom_tf
+	global odom_list
+
+	cmds = [[1, 0], [2, 0], [0.5, 0], [0, 1], [0, 2], [0, 0], [1, 3.14]]
+
+	pub = rospy.Publisher('/cmd_vel_mux/input/teleop', Twist)
+	sub = rospy.Subscriber('odom', Odometry, readOdom, queue_size=5)
+	bumper_sub = rospy.Subscriber('/mobile_base/events/bumper', BumperEvent, readBumper)
+	odom_list = tf.TransformListener()
+	odom_tf = tf.TransformBroadcaster()
+
+	if not odom_tf:
+		print "odom_tf not initalized properly. Exiting."
+		return
+	else: 
+		print odom_tf
+
+	odom_tf.sendTransform((0, 0, 0),
+	(0, 0, 0, 1),
+	rospy.Time.now(),
+	"base_footprint",
+	"odom")
+	sleeper = rospy.Duration(1)
+	rospy.sleep(sleeper)
+
+	#driveStraight(.1, 1)
+	#print "Drive straight"
+	#rotate(math.pi/2)
+	#print "Drive rotated"
+	#driveArc(.5, .5, math.pi / 2)
+	#print "Drive Arc'd"
+	#executeTrajectory()
+	#spinWheels(0.125, .25, 2)
+	rospy.sleep(sleeper)
+	rospy.loginfo("Complete")
+
+
+
 def astar_init():
         # Change this node name to include your username
     rospy.init_node('rbansal_vcunha_dbourque_Lab3Node')
@@ -670,8 +763,8 @@ def astar_init():
     pub_map      = rospy.Publisher('/map_optimized', OccupancyGrid, latch=True)
     
     #Subscribers:
-    sub = rospy.Subscriber('/initialpose', PoseWithCovarianceStamped, set_initial_pose, queue_size=1)
-    sub = rospy.Subscriber('/move_base_simple/goal', PoseStamped, set_goal_pose, queue_size=1)  
+    #sub = rospy.Subscriber('/initialpose', PoseWithCovarianceStamped, set_initial_pose, queue_size=1)
+    sub = rospy.Subscriber('/clicked_point', PointStamped, set_goal_pose, queue_size=1)  
     sub = rospy.Subscriber('/move_base/local_costmap/costmap', OccupancyGrid, map_function, queue_size=1)
     
     # Use this command to make the program wait for some seconds
@@ -687,7 +780,7 @@ def astar_init():
 # This is the program's main function
 if __name__ == '__main__':
     astar_init()
-    #Movement.movement_init()
+    Movement.movement_init()
     
     rospy.spin()
     

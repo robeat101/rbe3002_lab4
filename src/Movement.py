@@ -174,12 +174,21 @@ def readOdom(msg):
     geo_quat = pose.pose.orientation
   
     odom_tf.sendTransform((pose.pose.position.x, pose.pose.position.y, 0),
-        (pose.pose.orientation.x, pose.pose.orientation.y,pose.pose.orientation.z,pose.pose.orientation.w),
-        rospy.Time.now(),
-        "base_footprint",
-        "odom")
-    #odom_tf.sendTransform((pose.pose.position.x, pose,pose.position.y, 0), (pose.pose.orientation.x, pose.pose.orientation.y, \
+       (pose.pose.orientation.x, pose.pose.orientation.y,pose.pose.orientation.z,pose.pose.orientation.w),
+       rospy.Time.now(),
+       "base_footprint",
+       "odom")
+    #odom_tf.sendTransform((pose.pose.position.x, pose.pose.position.y, 0), (pose.pose.orientation.x, pose.pose.orientation.y, 
 #pose.pose.orientation.z, pose.pose.orientation.w), rospy.Time.now(), "base_footprint", "odom")
+
+
+def returnTransform_mapOdom():
+
+    global odom_list
+
+    odom_list.waitForTransform('map', 'base_footprint', rospy.Time(0), rospy.Duration(4.0))
+    return odom_list.lookupTransform('map', 'base_footprint', rospy.Time(0))
+
 
 #Bumper Event Callback function
 def readBumper(msg):
@@ -202,6 +211,8 @@ def timerCallback(event):
     euler = tf.transformations.euler_from_quaternion(quaternion)
     theta = euler[2]
 
+    print "This is Ozan's Euler"
+    print euler
 
 #Main handler of the project
 def movement_init():
