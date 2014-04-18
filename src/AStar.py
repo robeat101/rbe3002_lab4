@@ -9,8 +9,13 @@ from numpy import ma
 from math import sqrt
 from __builtin__ import pow
 from genpy.rostime import Duration
+import numpy
 
-
+global Astar_Done_Flag
+global run_astar_flag
+Astar_Done_Flag = True
+run_astar_flag = False
+    
 def heuristic(current, end):
     global h_const
     x_2 = pow((current.point.x - end.point.x), 2)
@@ -161,8 +166,7 @@ def ObstacleExpansion(map):
 
 #Map callback function
 def map_function(msg):
-    
-   # print "Starting Map_function"
+    # print "Starting Map_function"
     global map_data
     global map_width
     global map_height
@@ -175,6 +179,7 @@ def map_function(msg):
     global robot_resolution
     global curr_odom_x
     global curr_odom_y
+    
 
     #for Occupancy Grid Optimization
     global map_scale
@@ -185,93 +190,94 @@ def map_function(msg):
     global map_scaled_resolution #set to robot_resolution
     global map_scaled_x_offset
     global map_scaled_y_offset
+    global run_astar_flag
+    global Astar_Done_Flag
     
-    msg = ObstacleExpansion(msg)
-    map_data = msg.data
-    map_resolution = round(msg.info.resolution, 3)
-    map_width = msg.info.width
-    map_height = msg.info.height
-    map_cell_width = map_resolution
-    map_cell_height = map_resolution
-    map_x_offset = round(msg.info.origin.position.x + (0.5 * map_resolution), 1)
-    map_y_offset = round(msg.info.origin.position.y + (0.5 * map_resolution), 1)
-
-
-    """curr_odom_x = msg.pose.pose.readOdom().x
-    curr_odom_y = msg.pose.pose.readOdom().y
-    start_pos_x = curr_odom_x.pub_start
-    start_pos_y = curr_odom_y.pub_start
-
-    print start_pos_y
-    print start_pos_x   """
+    if(Astar_Done_Flag == True):
+        msg = ObstacleExpansion(msg)
+        map_data = msg.data
+        map_resolution = round(msg.info.resolution, 3)
+        map_width = msg.info.width
+        map_height = msg.info.height
+        map_cell_width = map_resolution
+        map_cell_height = map_resolution
+        map_x_offset = round(msg.info.origin.position.x + (0.5 * map_resolution), 1)
+        map_y_offset = round(msg.info.origin.position.y + (0.5 * map_resolution), 1)
     
     
-
-
-
-
-
-    #for Occupancy Grid Optimization
-    map_scale = int(round(map_scaled_resolution / map_resolution)) #scale factor
-    new_map = copy.copy(msg)
+        """curr_odom_x = msg.pose.pose.readOdom().x
+        curr_odom_y = msg.pose.pose.readOdom().y
+        start_pos_x = curr_odom_x.pub_start
+        start_pos_y = curr_odom_y.pub_start
     
-    new_map.info.width = int(round(map_width / map_scale, 0))
-    new_map.info.height = int(round(map_height / map_scale, 0))
-    new_map.info.resolution = map_scaled_resolution 
-    
-    map_scaled_width = new_map.info.width
-    map_scaled_height = new_map.info.height
-    map_scaled_cell_width = map_scaled_resolution
-    map_scaled_cell_height = map_scaled_resolution
-    
-    map_scaled_x_offset = map_x_offset
-    map_scaled_y_offset = map_y_offset
-    diagonal_distance = sqrt(map_scaled_cell_width**2 + map_scaled_cell_height**2)
-    
-    MapPosStatus = {}
-    for x in xrange(0, map_scaled_width):
-        for y in xrange(0, map_scaled_height):
-            index = y * map_scaled_width + x
-            MapPosStatus[(x,y)] = 0
-    xy = []
-    for i in xrange(0, map_scale):
-        for j in xrange(0, map_scale):
-            xy.append((i,j));
-    
-    new_data = [0,] * (map_scaled_width * map_scaled_height)
-    for x in xrange(0, map_scaled_width):
-        for y in xrange(0, map_scaled_height):
-            cost = 0
-            nodes = 0
-            for node in xy:
-                nodex = x * map_scale + node[0]
-                nodey = y * map_scale + node[1]
-                index = nodey * map_width + nodex
-                if(index >= 0 and index < len(map_data)):
-                    if(map_data[index] >= 0):
-                        cost = cost + map_data[index]
-                    else:
-                        cost = cost + 20
-                    nodes = nodes+1
-            cost = cost/nodes
-            if(cost > 75):
-                cost = 100
-            new_data[y * map_scaled_width + x] = cost
-            
-    
-    new_map.data = tuple(new_data)
-    map_data = new_map.data
-    pub_map.publish(new_map)
-    print "Done"
-    if(end_pos_flag == True):
-        w = run_Astar
-        if(w != None):
-         
-        	print run_Astar()
-       		
-        	#movement_init()
-            #DriveTowards(w[0])
+        print start_pos_y
+        print start_pos_x   """
         
+        
+    
+    
+    
+    
+    
+        #for Occupancy Grid Optimization
+        map_scale = int(round(map_scaled_resolution / map_resolution)) #scale factor
+        new_map = copy.copy(msg)
+        
+        new_map.info.width = int(round(map_width / map_scale, 0))
+        new_map.info.height = int(round(map_height / map_scale, 0))
+        new_map.info.resolution = map_scaled_resolution 
+        
+        map_scaled_width = new_map.info.width
+        map_scaled_height = new_map.info.height
+        map_scaled_cell_width = map_scaled_resolution
+        map_scaled_cell_height = map_scaled_resolution
+        
+        map_scaled_x_offset = map_x_offset
+        map_scaled_y_offset = map_y_offset
+        diagonal_distance = sqrt(map_scaled_cell_width**2 + map_scaled_cell_height**2)
+        
+        MapPosStatus = {}
+        for x in xrange(0, map_scaled_width):
+            for y in xrange(0, map_scaled_height):
+                index = y * map_scaled_width + x
+                MapPosStatus[(x,y)] = 0
+        xy = []
+        for i in xrange(0, map_scale):
+            for j in xrange(0, map_scale):
+                xy.append((i,j));
+        
+        new_data = [0,] * (map_scaled_width * map_scaled_height)
+        for x in xrange(0, map_scaled_width):
+            for y in xrange(0, map_scaled_height):
+                cost = 0
+                nodes = 0
+                for node in xy:
+                    nodex = x * map_scale + node[0]
+                    nodey = y * map_scale + node[1]
+                    index = nodey * map_width + nodex
+                    if(index >= 0 and index < len(map_data)):
+                        if(map_data[index] >= 0):
+                            cost = cost + map_data[index]
+                        else:
+                            cost = cost + 20
+                        nodes = nodes+1
+                cost = cost/nodes
+                if(cost > 75):
+                    cost = 100
+                new_data[y * map_scaled_width + x] = cost
+                
+        
+        new_map.data = tuple(new_data)
+        map_data = new_map.data
+        pub_map.publish(new_map)
+        print "Done"
+        print end_pos_flag
+        if(end_pos_flag == True):
+            Movement.Movement_Stop_flag = True
+            run_astar_flag = True
+            rospy.sleep(rospy.Duration(0.5, 0))
+            return
+            
 
 #this needs to be universalized for other maps
 def getMapIndex(node):
@@ -327,23 +333,38 @@ def WhereToGo(node):
     NorthWest = AStarNode(round(node.point.x-map_scaled_cell_width,3), round(node.point.y+map_scaled_cell_height,3))
     NorthWest.g = node.g + diagonal_distance
     NorthWest.step_direction = direction.nw
-
-    if (map_data[getMapIndex(North)] != 100) and (map_data[getMapIndex(North)] != -1):
-        possibleNodes.append(North)
-    if (map_data[getMapIndex(NorthEast)] != 100) and (map_data[getMapIndex(NorthEast)] != -1):
-        possibleNodes.append(NorthEast)
-    if (map_data[getMapIndex(East)] != 100) and (map_data[getMapIndex(East)] != -1):
-        possibleNodes.append(East)
-    if (map_data[getMapIndex(SouthEast)] != 100) and (map_data[getMapIndex(SouthEast)] != -1):
-        possibleNodes.append(SouthEast)
-    if (map_data[getMapIndex(South)] != 100) and (map_data[getMapIndex(South)] != -1):
-        possibleNodes.append(South)
-    if (map_data[getMapIndex(SouthWest)] != 100) and (map_data[getMapIndex(SouthWest)] != -1):
-        possibleNodes.append(SouthWest)
-    if (map_data[getMapIndex(West)] != 100) and (map_data[getMapIndex(West)] != -1):
-        possibleNodes.append(West)
-    if (map_data[getMapIndex(NorthWest)] != 100) and (map_data[getMapIndex(NorthWest)] != -1):
-        possibleNodes.append(NorthWest)
+    
+    if(getMapIndex(North) < len(map_data) and getMapIndex(North) > 0):
+        if (map_data[getMapIndex(North)] != 100) and (map_data[getMapIndex(North)] != -1):
+            possibleNodes.append(North)
+            
+    if(getMapIndex(NorthEast) < len(map_data) and getMapIndex(NorthEast) > 0):
+        if (map_data[getMapIndex(NorthEast)] != 100) and (map_data[getMapIndex(NorthEast)] != -1):
+            possibleNodes.append(NorthEast)
+            
+    if(getMapIndex(East) < len(map_data) and getMapIndex(East) > 0):
+        if (map_data[getMapIndex(East)] != 100 ) and (map_data[getMapIndex(East)] != -1):
+            possibleNodes.append(East)
+            
+    if(getMapIndex(SouthEast) < len(map_data) and getMapIndex(SouthEast) > 0):
+        if (map_data[getMapIndex(SouthEast)] != 100) and (map_data[getMapIndex(SouthEast)] != -1):
+            possibleNodes.append(SouthEast)
+            
+    if(getMapIndex(South) < len(map_data) and getMapIndex(South) > 0):
+        if (map_data[getMapIndex(South)] != 100) and (map_data[getMapIndex(South)] != -1):
+            possibleNodes.append(South)
+            
+    if(getMapIndex(SouthWest) < len(map_data) and getMapIndex(SouthWest) > 0):
+        if (map_data[getMapIndex(SouthWest)] != 100) and (map_data[getMapIndex(SouthWest)] != -1):
+            possibleNodes.append(SouthWest)
+            
+    if(getMapIndex(West) < len(map_data) and getMapIndex(West) > 0):
+        if (map_data[getMapIndex(West)] != 100) and (map_data[getMapIndex(West)] != -1):
+            possibleNodes.append(West)
+            
+    if(getMapIndex(NorthWest) < len(map_data) and getMapIndex(NorthWest) > 0):
+        if (map_data[getMapIndex(NorthWest)] != 100) and (map_data[getMapIndex(NorthWest)] != -1):
+            possibleNodes.append(NorthWest)
 
     return possibleNodes
 
@@ -452,6 +473,8 @@ def run_Astar():
     global pub_start
     global pub_end
     global pub_path
+    global Astar_Done_Flag
+    
     set_initial_pose()
     PublishGridCells(pub_start, [start])
     PublishGridCells(pub_end, [end])
@@ -490,14 +513,29 @@ def run_Astar():
         print "Displaying Path"
         PublishGridCells(pub_path, path)
         rospy.sleep(rospy.Duration(1, 0))
-        
         PublishGridCells(pub_path, [])
-        
         print "Showing Waypoints"
         waypoints = getWaypoints(path)
         PublishWayPoints(pub_path, waypoints)
+        
+        print "Get Orientation"
+        quaternion = start.orientation
+        print "Get euler"
+        euler = tf.transformations.euler_from_quaternion(quaternion)
+        w = waypoints[0]
+        print "Get alpha"
+        alpha = numpy.arctan2(w.point.x - start.point.x, w.point.y - start.point.y)
+        print "rotate"
+        Movement.rotate(Euler[2] - alpha)
+        print "Drive Straight"
+        Movement.driveStraight(.2, straightLineDistance(waypoints[0], waypoints[1]))
+        print "Showing Waypoints"
         return waypoints
 
+def straightLineDistance(node, next):
+    x_2 = pow((node.point.x - next.point.x), 2)
+    y_2 = pow((node.point.y - next.point.y), 2)
+    return sqrt(x_2+y_2)
 #####################################3
 # set and print initialpose
 def set_initial_pose ():
@@ -580,7 +618,7 @@ def set_goal_pose (msg):
     global start_pos_flag
     global end_pos_flag
     global robot_resolution
-    
+    print "set_goal_pos"
     map_scaled_cell_width = robot_resolution
     map_scaled_cell_height = robot_resolution
     end_pos_x = msg.point.x
@@ -611,14 +649,14 @@ def set_goal_pose (msg):
     if(start_pos_flag == True and end_pos_flag == True):
            print 'running Astar'
            try:
-               waypoints = run_Astar();
+               run_astar_flag = True
            except:
                pass
   
 
 #-------------------------//-----------------------------------------------------------//----------------
 # Robot Drive Functions
-
+#
 def pubTwist(linear, angular):
   global pub_tf
   global odom_tf
@@ -722,7 +760,8 @@ def astar_init():
     global end_pos_flag
     global AStar_Done
     global robot_resolution
-
+    run_astar_flag = False
+    
     map_scaled_flag = False
     robot_resolution = 0.2
     map_scaled_resolution = robot_resolution
@@ -775,15 +814,30 @@ def astar_init():
     start = AStarNode(-1,-1.8)
     print "AStar set up. "
 
+def astar_execute():
+    global run_astar_flag
+    global Astar_Done_Flag
+    
+    while(1):
+      if(run_astar_flag == True):
+          Astar_Done_Flag = False
+          Movement.Movement_Stop_flag = False
+          print run_astar_flag
+          run_Astar()
+          Astar_Done_Flag = True
+          run_astar_flag = False    
+      # Use this command to make the program wait for some seconds
+      rospy.sleep(rospy.Duration(.4, 0))
+
 
 #######################################
 # This is the program's main function
 if __name__ == '__main__':
+    run_astar_flag = False
+    Astar_Done_Flag = True
     astar_init()
     Movement.movement_init()
-    
-    rospy.spin()
-    
+    astar_execute()
     
     
 

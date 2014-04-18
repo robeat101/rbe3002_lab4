@@ -6,6 +6,7 @@ Panels:
       Expanded:
         - /Global Options1
         - /Status1
+        - /Explored1
         - /Optimized Map1
         - /Optimized Map1/Status1
         - /RobotModel1
@@ -34,24 +35,6 @@ Panels:
 Visualization Manager:
   Class: ""
   Displays:
-    - Alpha: 0.5
-      Cell Size: 0.2
-      Class: rviz/Grid
-      Color: 160; 160; 164
-      Enabled: true
-      Line Style:
-        Line Width: 0.03
-        Value: Lines
-      Name: Grid
-      Normal Cell Count: 0
-      Offset:
-        X: 0.6
-        Y: 0.6
-        Z: 0
-      Plane: XY
-      Plane Cell Count: 37
-      Reference Frame: <Fixed Frame>
-      Value: true
     - Alpha: 0.7
       Class: rviz/Map
       Color Scheme: map
@@ -312,7 +295,7 @@ Visualization Manager:
         Value: false
       Name: Current View
       Near Clip Distance: 0.01
-      Scale: 73.5015
+      Scale: 58.9188
       Target Frame: <Fixed Frame>
       Value: TopDownOrtho (rviz)
       X: 0
